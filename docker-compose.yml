@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - api-perf-tester
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    volumes:
+      - k6-data:/app/temp
+    networks:
+      - api-perf-tester
+    # Install k6 in the container
+    command: >
+      sh -c "
+        apk add --no-cache k6 &&
+        npm start
+      "
+
+  # Optional: k6 service for distributed testing
+  k6:
+    image: grafana/k6:latest
+    networks:
+      - api-perf-tester
+    volumes:
+      - k6-data:/scripts
+    profiles:
+      - testing
+
+volumes:
+  k6-data:
+
+networks:
+  api-perf-tester:
+    driver: bridge
